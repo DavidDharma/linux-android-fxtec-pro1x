@@ -66,10 +66,13 @@ jobs:
           test -n "$(find artifacts/deb -name '*.deb' -print -quit)"
 
       # Extraction du boot.img
+      # Extraction des images de démarrage
       - name: Extract boot images
         run: |
+          set -e
+
           BOOT_DEB=$(find artifacts/deb \
-            -name 'linux-bootimage-4.19-0-fxtec-pro1x_*.deb' \
+            -name 'linux-bootimage-*.deb' \
             -print -quit)
 
           if [ -z "$BOOT_DEB" ]; then
@@ -81,25 +84,25 @@ jobs:
 
           dpkg-deb -x "$BOOT_DEB" "$RUNNER_TEMP/bootimage"
 
-          BOOT_IMAGE=$(find "$RUNNER_TEMP/bootimage" \
-            -type f -name boot.img -print -quit)
+          BOOT_DIR="$RUNNER_TEMP/bootimage/boot"
 
-          if [ -z "$BOOT_IMAGE" ]; then
-            echo "boot.img not found in package!"
-            exit 1
-          fi
-
-          cp "$BOOT_IMAGE" artifacts/boot/
-
-          # DTBO et VBMeta, si présents
-          for image in dtbo.img vbmeta.img; do
-            FILE=$(find "$RUNNER_TEMP/bootimage" \
-              -type f -name "$image" -print -quit)
+          for image in boot recovery dtbo vbmeta; do
+            FILE=$(find "$BOOT_DIR" \
+              -maxdepth 1 \
+              -type f \
+              -name "${image}.img-*" \
+              -print -quit)
 
             if [ -n "$FILE" ]; then
-              cp "$FILE" artifacts/boot/
+              cp "$FILE" "artifacts/boot/${image}.img"
+              echo "Extracted: ${image}.img"
+            else
+              echo "Not found: ${image}.img"
             fi
           done
+
+          test -f artifacts/boot/boot.img
+
 
       # Informations de compilation
       - name: Generate build information
