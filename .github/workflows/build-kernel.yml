@@ -67,24 +67,35 @@ jobs:
 
       # Extraction du boot.img
       # Extraction des images de démarrage
+      # Extraction des images de démarrage
       - name: Extract boot images
         run: |
           set -e
 
           BOOT_DEB=$(find artifacts/deb \
-            -name 'linux-bootimage-*.deb' \
+            -name 'linux-bootimage-4.19-0-fxtec-pro1x_*.deb' \
             -print -quit)
 
           if [ -z "$BOOT_DEB" ]; then
-            echo "Bootimage Debian package not found!"
+            echo "Versioned bootimage Debian package not found!"
             exit 1
           fi
 
+          echo "Using package: $BOOT_DEB"
+
           mkdir -p "$RUNNER_TEMP/bootimage"
+          mkdir -p artifacts/boot
 
           dpkg-deb -x "$BOOT_DEB" "$RUNNER_TEMP/bootimage"
 
           BOOT_DIR="$RUNNER_TEMP/bootimage/boot"
+
+          if [ ! -d "$BOOT_DIR" ]; then
+            echo "Boot directory not found in package!"
+            echo "Package contents:"
+            find "$RUNNER_TEMP/bootimage" -type f
+            exit 1
+          fi
 
           for image in boot recovery dtbo vbmeta; do
             FILE=$(find "$BOOT_DIR" \
@@ -102,6 +113,7 @@ jobs:
           done
 
           test -f artifacts/boot/boot.img
+
 
 
       # Informations de compilation
